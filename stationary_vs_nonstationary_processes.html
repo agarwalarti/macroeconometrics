@@ -1,0 +1,126 @@
+
+<style>
+.panel { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 12px; }
+.panel-label { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px; }
+.panel-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px; }
+.panel-eq { font-size: 12px; color: var(--color-text-tertiary); font-family: var(--font-mono); margin-bottom: 10px; }
+.prop-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.badge-ok { background: var(--color-background-success); color: var(--color-text-success); }
+.badge-warn { background: var(--color-background-danger); color: var(--color-text-danger); }
+.badge-info { background: var(--color-background-info); color: var(--color-text-info); }
+.ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+</style>
+
+<div class="ctrl-row">
+  <button onclick="resim()" style="font-size:13px;padding:5px 16px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻ Resimulate</button>
+  <span style="font-size:12px;color:var(--color-text-tertiary)">T = 200 observations</span>
+</div>
+
+<div class="panel">
+  <div class="panel-label">Process 1 — Stationary</div>
+  <div class="panel-title">AR(1): Mean-reverting</div>
+  <div class="panel-eq">y_t = 0.7·y_{t-1} + ε_t,  ε_t ~ iid N(0,1)</div>
+  <canvas id="c1" height="100"></canvas>
+  <div class="prop-row">
+    <span class="badge badge-ok">Constant mean</span>
+    <span class="badge badge-ok">Constant variance</span>
+    <span class="badge badge-ok">Decaying autocorrelation</span>
+    <span class="badge badge-ok">Forecastable long-run level</span>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-label">Process 2 — Non-stationary (unit root)</div>
+  <div class="panel-title">Random Walk: I(1)</div>
+  <div class="panel-eq">y_t = y_{t-1} + ε_t,  ε_t ~ iid N(0,1)</div>
+  <canvas id="c2" height="100"></canvas>
+  <div class="prop-row">
+    <span class="badge badge-warn">Variance → ∞ with T</span>
+    <span class="badge badge-warn">No mean reversion</span>
+    <span class="badge badge-warn">Persistent shocks</span>
+    <span class="badge badge-info">Difference to make stationary</span>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-label">Process 3 — White Noise</div>
+  <div class="panel-title">iid Noise: Unpredictable baseline</div>
+  <div class="panel-eq">y_t = ε_t,  ε_t ~ iid N(0,1)</div>
+  <canvas id="c3" height="100"></canvas>
+  <div class="prop-row">
+    <span class="badge badge-ok">Constant mean (= 0)</span>
+    <span class="badge badge-ok">Constant variance</span>
+    <span class="badge badge-ok">Zero autocorrelation</span>
+    <span class="badge badge-warn">No forecastability (E[y_{t+1}] = 0)</span>
+  </div>
+</div>
+
+<script>
+const T = 200;
+
+function randn() {
+  let u = 0, v = 0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+
+function genAR1(phi=0.7) {
+  let y = [0];
+  for(let t=1;t<T;t++) y.push(phi*y[t-1]+randn());
+  return y;
+}
+
+function genRW() {
+  let y = [0];
+  for(let t=1;t<T;t++) y.push(y[t-1]+randn());
+  return y;
+}
+
+function genWN() {
+  return Array.from({length:T},()=>randn());
+}
+
+function drawSeries(canvasId, data, color) {
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio||1;
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.style.width = W+'px';
+  canvas.style.height = '100px';
+  canvas.width = W*dpr;
+  canvas.height = 100*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,100);
+
+  const mn = Math.min(...data), mx = Math.max(...data);
+  const pad = 8;
+  const sy = v => pad + (1-(v-mn)/(mx-mn))*(100-2*pad);
+  const sx = i => (i/(T-1))*W;
+
+  // zero line
+  const z = sy(0);
+  ctx.strokeStyle = 'rgba(128,128,128,0.2)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(0,z); ctx.lineTo(W,z); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // series
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  data.forEach((v,i) => i===0 ? ctx.moveTo(sx(i),sy(v)) : ctx.lineTo(sx(i),sy(v)));
+  ctx.stroke();
+}
+
+function resim() {
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  drawSeries('c1', genAR1(), isDark ? '#5DCAA5' : '#0F6E56');
+  drawSeries('c2', genRW(), isDark ? '#F0997B' : '#993C1D');
+  drawSeries('c3', genWN(), isDark ? '#85B7EB' : '#185FA5');
+}
+
+resim();
+</script>
