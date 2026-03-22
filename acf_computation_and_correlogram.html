@@ -1,0 +1,291 @@
+
+<style>
+.row { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.lbl { font-size:13px; color:var(--color-text-secondary); white-space:nowrap; }
+.val { font-size:13px; font-weight:500; color:var(--color-text-primary); min-width:32px; }
+.card { background:var(--color-background-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem; margin-bottom:12px; }
+.card-title { font-size:13px; font-weight:500; color:var(--color-text-secondary); margin-bottom:8px; }
+.mono { font-family:var(--font-mono); font-size:12px; color:var(--color-text-primary); line-height:1.8; }
+.step-row { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; margin:3px 0; }
+.step-k { font-family:var(--font-mono); font-size:12px; color:var(--color-text-tertiary); min-width:28px; }
+.step-eq { font-family:var(--font-mono); font-size:12px; color:var(--color-text-secondary); }
+.step-num { font-family:var(--font-mono); font-size:12px; font-weight:500; }
+.sig { color:#185fa5; }
+.sig-neg { color:#a32d2d; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.stat-pill { display:inline-block; font-family:var(--font-mono); font-size:11px; padding:3px 10px; border-radius:20px; background:var(--color-background-primary); border:0.5px solid var(--color-border-secondary); color:var(--color-text-secondary); margin:2px; }
+</style>
+
+<div class="row">
+  <span class="lbl">Process</span>
+  <select id="proc-sel" style="font-size:13px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">
+    <option value="ar1">AR(1)</option>
+    <option value="ma1">MA(1)</option>
+    <option value="wn">White noise</option>
+    <option value="rw">Random walk I(1)</option>
+  </select>
+  <span class="lbl" id="phi-lbl">φ =</span>
+  <input type="range" id="phi-sl" min="-95" max="95" value="70" step="5" style="width:120px">
+  <span class="val" id="phi-val">0.70</span>
+  <span class="lbl">T =</span>
+  <select id="t-sel" style="font-size:13px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">
+    <option value="60">60</option>
+    <option value="120" selected>120</option>
+    <option value="300">300</option>
+  </select>
+  <button onclick="resim()" style="font-size:12px;padding:4px 14px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+  <div class="card-title">Simulated series  <span id="series-stats" style="font-size:11px;font-weight:400;"></span></div>
+  <div style="position:relative;width:100%;height:90px"><canvas id="c-series"></canvas></div>
+</div>
+
+<div class="card">
+  <div class="card-title">Step-by-step computation — first 8 lags</div>
+  <div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:12px">
+    <thead>
+      <tr style="border-bottom:0.5px solid var(--color-border-secondary)">
+        <th style="text-align:left;padding:4px 8px;color:var(--color-text-tertiary);font-weight:500">lag k</th>
+        <th style="text-align:right;padding:4px 8px;color:var(--color-text-tertiary);font-weight:500">pairs used</th>
+        <th style="text-align:right;padding:4px 8px;color:var(--color-text-tertiary);font-weight:500">γ̂(k) = Σ(yₜ−ȳ)(yₜ₋ₖ−ȳ)/T</th>
+        <th style="text-align:right;padding:4px 8px;color:var(--color-text-tertiary);font-weight:500">ρ̂(k) = γ̂(k)/γ̂(0)</th>
+        <th style="text-align:left;padding:4px 8px;color:var(--color-text-tertiary);font-weight:500">sig?</th>
+      </tr>
+    </thead>
+    <tbody id="acf-table"></tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Correlogram (ACF)  <span style="font-size:11px;font-weight:400;color:var(--color-text-tertiary)">— shaded band = ±1.96/√T (Bartlett 95% CI)</span></div>
+  <div style="position:relative;width:100%;height:200px"><canvas id="c-acf"></canvas></div>
+  <div id="acf-footer" style="margin-top:8px;font-size:11px;color:var(--color-text-tertiary)"></div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="card-title">Partial ACF (PACF)</div>
+    <div style="position:relative;width:100%;height:160px"><canvas id="c-pacf"></canvas></div>
+    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px">Cuts off at lag p for AR(p); tails off for MA</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Ljung-Box test  <span style="font-size:11px;font-weight:400">H₀: all ρ(k)=0</span></div>
+    <div id="lb-out" style="font-size:12px;line-height:1.9;margin-top:4px"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let seriesChart, acfChart, pacfChart;
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const COL_POS = isDark ? '#5DCAA5' : '#0F6E56';
+const COL_NEG = isDark ? '#F0997B' : '#993C1D';
+const COL_SER = isDark ? '#85B7EB' : '#185FA5';
+const COL_GRID = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+const COL_ZERO = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
+const COL_CI   = isDark ? 'rgba(95,94,90,0.35)' : 'rgba(136,135,128,0.2)';
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+function genSeries(proc, phi, T){
+  const y=[0];
+  if(proc==='ar1'){for(let t=1;t<T;t++)y.push(phi*y[t-1]+randn());}
+  else if(proc==='ma1'){const e=[randn()];for(let t=1;t<T;t++){const ei=randn();y.push(phi*e[t-1]+ei);e.push(ei);}}
+  else if(proc==='wn'){y.length=0;for(let t=0;t<T;t++)y.push(randn());}
+  else{for(let t=1;t<T;t++)y.push(y[t-1]+randn());}
+  return y;
+}
+
+function mean(y){return y.reduce((a,b)=>a+b,0)/y.length;}
+
+function acov(y, k){
+  const mu=mean(y), T=y.length;
+  let s=0;
+  for(let t=k;t<T;t++) s+=(y[t]-mu)*(y[t-k]-mu);
+  return s/T;
+}
+
+function computeACF(y, maxLag){
+  const g0=acov(y,0);
+  return Array.from({length:maxLag+1},(_,k)=>({k,gamma:acov(y,k),rho:acov(y,k)/g0}));
+}
+
+function computePACF(acfVals, maxLag){
+  const rho=acfVals.map(a=>a.rho);
+  const pacf=[1,rho[1]];
+  const phi=[[],[],[ rho[1] ]];
+  for(let k=2;k<=maxLag;k++){
+    let num=rho[k]-phi[k-1].slice(1).reduce((s,v,i)=>s+v*rho[k-1-i],0);
+    let den=1-phi[k-1].slice(1).reduce((s,v,i)=>s+v*rho[i+1],0);
+    const pk=num/den;
+    phi.push([0,pk,...phi[k-1].slice(1).map((v,i)=>v-pk*phi[k-1][k-1-i])]);
+    pacf.push(pk);
+  }
+  return pacf;
+}
+
+function ljungBox(y, acfVals, maxLag){
+  const T=y.length;
+  let Q=0;
+  for(let k=1;k<=maxLag;k++) Q+=acfVals[k].rho**2/(T-k);
+  return T*(T+2)*Q;
+}
+
+function chiPval(Q,df){
+  if(Q<0)return 1;
+  let p=Math.exp(-Q/2);
+  let term=p, sum=p;
+  for(let i=1;i<df;i++){term*=Q/(2*i);sum+=term;}
+  return Math.min(1,Math.max(0,1-sum));
+}
+
+function drawSeriesChart(y){
+  const ctx=document.getElementById('c-series');
+  if(seriesChart)seriesChart.destroy();
+  seriesChart=new Chart(ctx,{
+    type:'line',
+    data:{labels:y.map((_,i)=>i),datasets:[{data:y,borderColor:COL_SER,borderWidth:1,pointRadius:0,fill:false,tension:0}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false,grid:{display:false}},y:{grid:{color:COL_GRID},ticks:{font:{size:10},color:isDark?'#888780':'#888780',maxTicksLimit:4}}}}
+  });
+}
+
+function drawACFChart(acfVals, T, maxLag){
+  const ctx=document.getElementById('c-acf');
+  if(acfChart)acfChart.destroy();
+  const ci=1.96/Math.sqrt(T);
+  const labels=acfVals.slice(1,maxLag+1).map(a=>'k='+a.k);
+  const rhos=acfVals.slice(1,maxLag+1).map(a=>+a.rho.toFixed(4));
+  const colors=rhos.map(r=>Math.abs(r)>=ci?(r>=0?COL_POS:COL_NEG):(isDark?'rgba(136,135,128,0.5)':'rgba(136,135,128,0.45)'));
+  acfChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {data:rhos,backgroundColor:colors,borderColor:colors,borderWidth:0,barPercentage:0.5},
+      {type:'line',data:Array(maxLag).fill(ci),borderColor:'rgba(136,135,128,0.5)',borderWidth:0.8,borderDash:[4,3],pointRadius:0,fill:false},
+      {type:'line',data:Array(maxLag).fill(-ci),borderColor:'rgba(136,135,128,0.5)',borderWidth:0.8,borderDash:[4,3],pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'ρ̂('+acfVals[ctx.dataIndex+1].k+') = '+ctx.raw.toFixed(3)}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:isDark?'#888780':'#888780',maxRotation:0}},
+        y:{min:-1,max:1,grid:{color:COL_GRID},ticks:{font:{size:10},color:isDark?'#888780':'#888780',stepSize:0.5},
+           border:{dash:[3,3]}}
+      }}
+  });
+}
+
+function drawPACFChart(pacfVals, T, maxLag){
+  const ctx=document.getElementById('c-pacf');
+  if(pacfChart)pacfChart.destroy();
+  const ci=1.96/Math.sqrt(T);
+  const vals=pacfVals.slice(1,maxLag+1).map(v=>+v.toFixed(4));
+  const colors=vals.map(v=>Math.abs(v)>=ci?(v>=0?COL_POS:COL_NEG):(isDark?'rgba(136,135,128,0.5)':'rgba(136,135,128,0.45)'));
+  pacfChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:vals.map((_,i)=>'k='+(i+1)),datasets:[
+      {data:vals,backgroundColor:colors,borderColor:colors,borderWidth:0,barPercentage:0.5},
+      {type:'line',data:Array(maxLag).fill(ci),borderColor:'rgba(136,135,128,0.5)',borderWidth:0.8,borderDash:[4,3],pointRadius:0,fill:false},
+      {type:'line',data:Array(maxLag).fill(-ci),borderColor:'rgba(136,135,128,0.5)',borderWidth:0.8,borderDash:[4,3],pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:isDark?'#888780':'#888780',maxRotation:0}},
+        y:{min:-1,max:1,grid:{color:COL_GRID},ticks:{font:{size:10},color:isDark?'#888780':'#888780',stepSize:0.5}}
+      }}
+  });
+}
+
+function updateTable(acfVals, T, showLags){
+  const ci=1.96/Math.sqrt(T);
+  const g0=acfVals[0].gamma;
+  const tbody=document.getElementById('acf-table');
+  tbody.innerHTML='';
+  for(let k=0;k<=showLags;k++){
+    const a=acfVals[k];
+    const sig=Math.abs(a.rho)>=ci;
+    const rhoCol=sig?(a.rho>=0?'color:#0F6E56':'color:#a32d2d'):'color:var(--color-text-tertiary)';
+    const isK0=k===0;
+    const pairsUsed=T-k;
+    const highlight=k===0?'background:var(--color-background-primary);':'';
+    tbody.innerHTML+=`<tr style="border-bottom:0.5px solid var(--color-border-secondary);${highlight}">
+      <td style="padding:5px 8px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-tertiary)">${k}</td>
+      <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--color-text-secondary)">${pairsUsed}</td>
+      <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono);font-size:12px">${isK0?'<b>'+a.gamma.toFixed(4)+'</b> ← γ̂(0) = variance':a.gamma.toFixed(4)}</td>
+      <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono);font-size:12px;${rhoCol};font-weight:${sig?500:400}">${isK0?'1.0000 (by definition)':a.rho.toFixed(4)}</td>
+      <td style="padding:5px 8px;font-size:11px">${isK0?'':(sig?'<span style="color:'+(a.rho>=0?'#0F6E56':'#a32d2d')+'">yes</span>':'<span style="color:var(--color-text-tertiary)">no</span>')}</td>
+    </tr>`;
+  }
+}
+
+function updateLjungBox(y, acfVals, T){
+  const lbDiv=document.getElementById('lb-out');
+  const lags=[5,10,15];
+  let html='';
+  lags.forEach(m=>{
+    const Q=ljungBox(y,acfVals,m);
+    const pv=chiPval(Q,m);
+    const col=pv<0.05?'color:#a32d2d':'color:#0F6E56';
+    html+=`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid var(--color-border-secondary)">
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--color-text-secondary)">Q(${m})</span>
+      <span style="font-family:var(--font-mono);font-size:12px">${Q.toFixed(2)}</span>
+      <span style="font-family:var(--font-mono);font-size:12px;${col}">p=${pv.toFixed(3)}</span>
+      <span style="font-size:11px;${col}">${pv<0.05?'reject H₀':'fail to reject'}</span>
+    </div>`;
+  });
+  lbDiv.innerHTML=html;
+}
+
+function updateFooter(acfVals, T){
+  const ci=1.96/Math.sqrt(T);
+  const nSig=acfVals.slice(1).filter(a=>Math.abs(a.rho)>=ci).length;
+  document.getElementById('acf-footer').textContent=`CI = ±${ci.toFixed(3)}  |  ${nSig} of ${acfVals.length-1} lags significant at 5%`;
+}
+
+function getParams(){
+  const proc=document.getElementById('proc-sel').value;
+  const phi=parseInt(document.getElementById('phi-sl').value)/100;
+  const T=parseInt(document.getElementById('t-sel').value);
+  return {proc,phi,T};
+}
+
+function updatePhiLabel(){
+  const proc=document.getElementById('proc-sel').value;
+  const phi=parseInt(document.getElementById('phi-sl').value)/100;
+  document.getElementById('phi-val').textContent=phi.toFixed(2);
+  const lbl=document.getElementById('phi-lbl');
+  if(proc==='ar1') lbl.textContent='φ (AR coeff) =';
+  else if(proc==='ma1') lbl.textContent='θ (MA coeff) =';
+  else lbl.textContent='(param unused)';
+  document.getElementById('phi-sl').disabled=(proc==='wn'||proc==='rw');
+}
+
+function resim(){
+  const {proc,phi,T}=getParams();
+  const maxLag=Math.min(20,Math.floor(T/4));
+  const showTableLags=7;
+  const y=genSeries(proc,phi,T);
+  const mu=mean(y);
+  const stddev=Math.sqrt(acov(y,0));
+  document.getElementById('series-stats').textContent=`ȳ = ${mu.toFixed(3)}   s = ${stddev.toFixed(3)}   T = ${T}`;
+  const acfVals=computeACF(y,maxLag);
+  const pacfVals=computePACF(acfVals,maxLag);
+  drawSeriesChart(y);
+  drawACFChart(acfVals,T,maxLag);
+  drawPACFChart(pacfVals,T,maxLag);
+  updateTable(acfVals,T,showTableLags);
+  updateLjungBox(y,acfVals,T);
+  updateFooter(acfVals,T);
+}
+
+document.getElementById('proc-sel').addEventListener('change',()=>{updatePhiLabel();resim();});
+document.getElementById('phi-sl').addEventListener('input',()=>{updatePhiLabel();resim();});
+document.getElementById('t-sel').addEventListener('change',resim);
+
+updatePhiLabel();
+resim();
+</script>
