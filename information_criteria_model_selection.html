@@ -1,0 +1,251 @@
+
+<style>
+.card { background:var(--color-background-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem; margin-bottom:12px; }
+.ct { font-size:13px; font-weight:500; color:var(--color-text-secondary); margin-bottom:8px; }
+.row { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.lbl { font-size:13px; color:var(--color-text-secondary); white-space:nowrap; }
+.val { font-size:13px; font-weight:500; color:var(--color-text-primary); min-width:36px; }
+.legend-dot { width:10px; height:10px; border-radius:2px; display:inline-block; margin-right:4px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.mono { font-family:var(--font-mono); font-size:12px; }
+.winner { font-weight:500; }
+</style>
+
+<div class="row">
+  <span class="lbl">Sample size T =</span>
+  <input type="range" id="T-sl" min="20" max="500" value="100" step="10" style="width:140px">
+  <span class="val" id="T-val">100</span>
+  <span style="font-size:12px;color:var(--color-text-tertiary)">— watch how BIC penalty grows</span>
+</div>
+
+<div class="card">
+  <div class="ct">Penalty per parameter: AIC vs BIC vs HQC at current T</div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">
+    <span style="font-size:13px"><span class="legend-dot" style="background:#185fa5"></span>AIC = 2 (constant)</span>
+    <span style="font-size:13px"><span class="legend-dot" style="background:#993c1d"></span>BIC = ln(T) = <b id="bic-pen">4.61</b></span>
+    <span style="font-size:13px"><span class="legend-dot" style="background:#3b6d11"></span>HQC = 2·ln(ln(T)) = <b id="hqc-pen">2.91</b></span>
+  </div>
+  <div style="position:relative;width:100%;height:160px"><canvas id="c-penalty"></canvas></div>
+</div>
+
+<div class="card">
+  <div class="ct">Model selection in action — AR(p) candidate models</div>
+  <div class="row" style="margin-bottom:10px">
+    <span class="lbl">True AR order =</span>
+    <select id="true-p" style="font-size:13px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+    </select>
+    <span class="lbl">φ₁ =</span>
+    <input type="range" id="phi1-sl" min="-80" max="80" value="60" step="5" style="width:100px">
+    <span class="val" id="phi1-val">0.60</span>
+    <span class="lbl">φ₂ =</span>
+    <input type="range" id="phi2-sl" min="-60" max="60" value="25" step="5" style="width:100px">
+    <span class="val" id="phi2-val">0.25</span>
+    <button onclick="resim()" style="font-size:12px;padding:4px 14px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻ Resim</button>
+  </div>
+  <div style="position:relative;width:100%;height:200px"><canvas id="c-ic"></canvas></div>
+  <div id="ic-verdict" style="margin-top:10px;font-size:12px;line-height:2"></div>
+</div>
+
+<div class="card">
+  <div class="ct">The overfitting penalty at work — RSS always falls, criteria may not</div>
+  <div style="position:relative;width:100%;height:160px"><canvas id="c-rss"></canvas></div>
+  <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px">RSS (residual sum of squares) always decreases when you add a parameter. The criteria add back the penalty to reveal the true cost.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const C_AIC  = isDark ? '#85B7EB' : '#185fa5';
+const C_BIC  = isDark ? '#F0997B' : '#993c1d';
+const C_HQC  = isDark ? '#97C459' : '#3b6d11';
+const C_RSS  = isDark ? '#B4B2A9' : '#5F5E5A';
+const C_GRID = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+const TICK_C = isDark ? '#888780' : '#888780';
+
+let charts = {};
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+function genAR(T, p, phis){
+  const y=new Array(10+T).fill(0);
+  for(let t=p;t<10+T;t++){
+    let v=randn();
+    for(let j=0;j<p;j++) v+=phis[j]*y[t-1-j];
+    y[t]=v;
+  }
+  return y.slice(10);
+}
+
+function fitAR(y, p){
+  const T=y.length;
+  if(p===0){
+    const mu=y.reduce((a,b)=>a+b,0)/T;
+    const rss=y.reduce((s,v)=>s+(v-mu)**2,0);
+    return {rss, sigma2:rss/T, k:1};
+  }
+  const n=T-p;
+  const Y=[], X=[];
+  for(let t=p;t<T;t++){
+    Y.push(y[t]);
+    const row=[];
+    for(let j=1;j<=p;j++) row.push(y[t-j]);
+    X.push(row);
+  }
+  const XtX=Array.from({length:p},(_,i)=>Array.from({length:p},(_,j)=>X.reduce((s,r)=>s+r[i]*r[j],0)));
+  const XtY=Array.from({length:p},(_,i)=>X.reduce((s,r,ri)=>s+r[i]*Y[ri],0));
+  const coeffs=solveLS(XtX,XtY,p);
+  const resids=Y.map((yi,i)=>yi-X[i].reduce((s,x,j)=>s+x*coeffs[j],0));
+  const rss=resids.reduce((s,r)=>s+r*r,0);
+  return {rss, sigma2:rss/n, k:p+1};
+}
+
+function solveLS(A,b,n){
+  const M=A.map((r,i)=>[...r,b[i]]);
+  for(let i=0;i<n;i++){
+    let maxR=i;
+    for(let r=i+1;r<n;r++) if(Math.abs(M[r][i])>Math.abs(M[maxR][i])) maxR=r;
+    [M[i],M[maxR]]=[M[maxR],M[i]];
+    for(let r=i+1;r<n;r++){
+      const f=M[r][i]/M[i][i];
+      for(let c=i;c<=n;c++) M[r][c]-=f*M[i][c];
+    }
+  }
+  const x=new Array(n).fill(0);
+  for(let i=n-1;i>=0;i--){
+    x[i]=M[i][n];
+    for(let j=i+1;j<n;j++) x[i]-=M[i][j]*x[j];
+    x[i]/=M[i][i];
+  }
+  return x;
+}
+
+function computeIC(rss, k, T){
+  const logL = -T/2*Math.log(2*Math.PI) - T/2*Math.log(rss/T) - T/2;
+  const aic  = -2*logL + 2*k;
+  const bic  = -2*logL + k*Math.log(T);
+  const hqc  = -2*logL + 2*k*Math.log(Math.log(T));
+  return {aic, bic, hqc, rss, logL};
+}
+
+function mkChart(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id),cfg);
+}
+
+function drawPenalty(T){
+  const Ts=Array.from({length:100},(_,i)=>Math.round(10+i*5));
+  mkChart('c-penalty',{
+    type:'line',
+    data:{labels:Ts,datasets:[
+      {label:'AIC',data:Ts.map(()=>2),borderColor:C_AIC,borderWidth:1.5,pointRadius:0,fill:false},
+      {label:'BIC',data:Ts.map(t=>Math.log(t)),borderColor:C_BIC,borderWidth:1.5,pointRadius:0,fill:false},
+      {label:'HQC',data:Ts.map(t=>2*Math.log(Math.log(t))),borderColor:C_HQC,borderWidth:1.5,pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},
+        annotation:{annotations:{line1:{type:'line',xMin:T,xMax:T,borderColor:'rgba(136,135,128,0.4)',borderWidth:1,borderDash:[4,3]}}}},
+      scales:{
+        x:{title:{display:true,text:'Sample size T',font:{size:11},color:TICK_C},grid:{color:C_GRID},
+           ticks:{font:{size:10},color:TICK_C,maxTicksLimit:8,callback:(v,i,ticks)=>Ts[i]}},
+        y:{title:{display:true,text:'Penalty per parameter',font:{size:11},color:TICK_C},
+           grid:{color:C_GRID},ticks:{font:{size:10},color:TICK_C},min:0,max:8}
+      }}
+  });
+}
+
+function drawIC(results, trueP, T){
+  const labels=results.map(r=>'AR('+r.p+')');
+  const aics=results.map(r=>+(r.ic.aic).toFixed(2));
+  const bics=results.map(r=>+(r.ic.bic).toFixed(2));
+  const hqcs=results.map(r=>+(r.ic.hqc).toFixed(2));
+
+  const minAIC=Math.min(...aics), minBIC=Math.min(...bics), minHQC=Math.min(...hqcs);
+  const selAIC=aics.indexOf(minAIC), selBIC=bics.indexOf(minBIC), selHQC=hqcs.indexOf(minHQC);
+
+  const bgAIC=aics.map((_,i)=>i===selAIC?C_AIC:'rgba(136,135,128,0.2)');
+  const bgBIC=bics.map((_,i)=>i===selBIC?C_BIC:'rgba(136,135,128,0.2)');
+  const bgHQC=hqcs.map((_,i)=>i===selHQC?C_HQC:'rgba(136,135,128,0.2)');
+
+  mkChart('c-ic',{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'AIC',data:aics,backgroundColor:bgAIC,borderColor:bgAIC,borderWidth:0,barPercentage:0.25},
+      {label:'BIC',data:bics,backgroundColor:bgBIC,borderColor:bgBIC,borderWidth:0,barPercentage:0.25},
+      {label:'HQC',data:hqcs,backgroundColor:bgHQC,borderColor:bgHQC,borderWidth:0,barPercentage:0.25},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw.toFixed(1)}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:TICK_C}},
+        y:{grid:{color:C_GRID},ticks:{font:{size:10},color:TICK_C,maxTicksLimit:5}}
+      }}
+  });
+
+  const mark=(sel,tp)=>sel===tp?'✓ correct':'✗ wrong (true = AR('+tp+'))';
+  document.getElementById('ic-verdict').innerHTML=`
+    <span style="color:${C_AIC}">AIC selects AR(${selAIC}) — ${mark(selAIC,trueP)}</span> &nbsp;|&nbsp;
+    <span style="color:${C_BIC}">BIC selects AR(${selBIC}) — ${mark(selBIC,trueP)}</span> &nbsp;|&nbsp;
+    <span style="color:${C_HQC}">HQC selects AR(${selHQC}) — ${mark(selHQC,trueP)}</span>
+    <br><span style="color:var(--color-text-tertiary)">Highlighted bars = selected model. Resimulate multiple times to see selection frequency.</span>`;
+}
+
+function drawRSS(results){
+  const labels=results.map(r=>'AR('+r.p+')');
+  mkChart('c-rss',{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'RSS',data:results.map(r=>+r.ic.rss.toFixed(2)),borderColor:C_RSS,borderWidth:1.5,pointRadius:4,pointBackgroundColor:C_RSS,fill:false,yAxisID:'y1'},
+      {label:'AIC',data:results.map(r=>+r.ic.aic.toFixed(2)),borderColor:C_AIC,borderWidth:1.5,pointRadius:3,pointBackgroundColor:C_AIC,fill:false,borderDash:[4,3],yAxisID:'y2'},
+      {label:'BIC',data:results.map(r=>+r.ic.bic.toFixed(2)),borderColor:C_BIC,borderWidth:1.5,pointRadius:3,pointBackgroundColor:C_BIC,fill:false,borderDash:[4,3],yAxisID:'y2'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:true,labels:{font:{size:11},color:TICK_C,boxWidth:10,padding:12}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:TICK_C}},
+        y1:{position:'left',title:{display:true,text:'RSS',font:{size:10},color:C_RSS},grid:{color:C_GRID},ticks:{font:{size:10},color:TICK_C,maxTicksLimit:5}},
+        y2:{position:'right',title:{display:true,text:'IC value',font:{size:10},color:TICK_C},grid:{display:false},ticks:{font:{size:10},color:TICK_C,maxTicksLimit:5}}
+      }}
+  });
+}
+
+function getParams(){
+  const T=parseInt(document.getElementById('T-sl').value);
+  const p=parseInt(document.getElementById('true-p').value);
+  const phi1=parseInt(document.getElementById('phi1-sl').value)/100;
+  const phi2=parseInt(document.getElementById('phi2-sl').value)/100;
+  return {T,p,phi1,phi2};
+}
+
+function resim(){
+  const {T,p,phi1,phi2}=getParams();
+  const phis=p===1?[phi1]:p===2?[phi1,phi2]:[phi1,phi2,0.15];
+  const maxLag=Math.min(8, Math.floor(T/10));
+  const y=genAR(T,p,phis);
+
+  const results=[];
+  for(let lag=0;lag<=maxLag;lag++){
+    const fit=fitAR(y,lag);
+    const ic=computeIC(fit.rss,fit.k,T);
+    results.push({p:lag,ic});
+  }
+
+  document.getElementById('bic-pen').textContent=Math.log(T).toFixed(2);
+  document.getElementById('hqc-pen').textContent=(2*Math.log(Math.log(T))).toFixed(2);
+  drawPenalty(T);
+  drawIC(results,p,T);
+  drawRSS(results);
+}
+
+document.getElementById('T-sl').addEventListener('input',()=>{
+  document.getElementById('T-val').textContent=document.getElementById('T-sl').value;
+  resim();
+});
+document.getElementById('phi1-sl').addEventListener('input',()=>{document.getElementById('phi1-val').textContent=(parseInt(document.getElementById('phi1-sl').value)/100).toFixed(2);resim();});
+document.getElementById('phi2-sl').addEventListener('input',()=>{document.getElementById('phi2-val').textContent=(parseInt(document.getElementById('phi2-sl').value)/100).toFixed(2);resim();});
+document.getElementById('true-p').addEventListener('change',resim);
+
+resim();
+</script>
