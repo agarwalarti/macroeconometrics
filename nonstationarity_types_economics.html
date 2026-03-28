@@ -1,0 +1,257 @@
+
+<style>
+.proc-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.proc-tab { font-size:12px; padding:6px 14px; border-radius:20px; border:0.5px solid var(--color-border-secondary); background:var(--color-background-primary); color:var(--color-text-secondary); cursor:pointer; font-family:var(--font-sans); transition:all 0.15s; }
+.proc-tab.active { border-color:var(--active-col,#185fa5); color:var(--active-col,#185fa5); background:var(--color-background-info); }
+.info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+.info-card { background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:10px 12px; }
+.info-label { font-size:11px; color:var(--color-text-tertiary); font-family:var(--font-mono); margin-bottom:3px; }
+.info-val { font-size:13px; font-weight:500; color:var(--color-text-primary); }
+.econ-badge { display:inline-block; font-size:11px; padding:3px 10px; border-radius:20px; margin:2px; background:var(--color-background-secondary); color:var(--color-text-secondary); border:0.5px solid var(--color-border-secondary); }
+.fix-box { background:var(--color-background-success); border-radius:var(--border-radius-md); padding:8px 12px; font-size:12px; color:var(--color-text-success); margin-top:10px; font-family:var(--font-mono); }
+.warn-box { background:var(--color-background-warning); border-radius:var(--border-radius-md); padding:8px 12px; font-size:12px; color:var(--color-text-warning); margin-top:6px; font-family:var(--font-mono); }
+.ctrl-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.lbl { font-size:12px; color:var(--color-text-secondary); }
+.val { font-size:12px; font-weight:500; min-width:36px; color:var(--color-text-primary); }
+</style>
+
+<div class="proc-tabs">
+  <button class="proc-tab active" style="--active-col:#993c1d;background:var(--color-background-danger);color:#993c1d;border-color:#993c1d" onclick="setProc('rw',this)">Unit root (random walk)</button>
+  <button class="proc-tab" onclick="setProc('trend',this)">Deterministic trend</button>
+  <button class="proc-tab" onclick="setProc('break',this)">Structural break</button>
+  <button class="proc-tab" onclick="setProc('explosive',this)">Explosive</button>
+</div>
+
+<div id="ctrl-rw" class="ctrl-row">
+  <span class="lbl">Drift μ =</span>
+  <input type="range" id="sl-drift" min="-5" max="5" value="1" step="1" style="width:120px" oninput="document.getElementById('v-drift').textContent=(this.value/100).toFixed(2);redraw()">
+  <span class="val" id="v-drift">0.01</span>
+  <span class="lbl">σ =</span>
+  <input type="range" id="sl-sigma" min="5" max="30" value="10" step="1" style="width:100px" oninput="document.getElementById('v-sigma').textContent=(this.value/10).toFixed(1);redraw()">
+  <span class="val" id="v-sigma">1.0</span>
+  <button onclick="redraw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+</div>
+<div id="ctrl-trend" class="ctrl-row" style="display:none">
+  <span class="lbl">Trend β =</span>
+  <input type="range" id="sl-beta" min="1" max="20" value="8" step="1" style="width:120px" oninput="document.getElementById('v-beta').textContent=(this.value/100).toFixed(2);redraw()">
+  <span class="val" id="v-beta">0.08</span>
+  <span class="lbl">AR(1) φ =</span>
+  <input type="range" id="sl-phi-t" min="0" max="80" value="50" step="5" style="width:100px" oninput="document.getElementById('v-phi-t').textContent=(this.value/100).toFixed(2);redraw()">
+  <span class="val" id="v-phi-t">0.50</span>
+  <button onclick="redraw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+</div>
+<div id="ctrl-break" class="ctrl-row" style="display:none">
+  <span class="lbl">Break at t =</span>
+  <input type="range" id="sl-break" min="20" max="80" value="50" step="1" style="width:120px" oninput="document.getElementById('v-break').textContent=this.value;redraw()">
+  <span class="val" id="v-break">50</span>
+  <span class="lbl">Shift size =</span>
+  <input type="range" id="sl-shift" min="5" max="40" value="20" step="1" style="width:100px" oninput="document.getElementById('v-shift').textContent=(this.value/5).toFixed(1);redraw()">
+  <span class="val" id="v-shift">4.0</span>
+  <button onclick="redraw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+</div>
+<div id="ctrl-explosive" class="ctrl-row" style="display:none">
+  <span class="lbl">φ =</span>
+  <input type="range" id="sl-expl" min="101" max="115" value="105" step="1" style="width:140px" oninput="document.getElementById('v-expl').textContent=(this.value/100).toFixed(2);redraw()">
+  <span class="val" id="v-expl">1.05</span>
+  <button onclick="redraw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+</div>
+
+<div style="position:relative;width:100%;height:220px;margin-bottom:12px">
+  <canvas id="c-main"></canvas>
+</div>
+
+<div style="position:relative;width:100%;height:140px;margin-bottom:14px">
+  <canvas id="c-diff"></canvas>
+</div>
+
+<div class="info-grid">
+  <div class="info-card"><div class="info-label">mean (levels)</div><div class="info-val" id="stat-mean">—</div></div>
+  <div class="info-card"><div class="info-label">variance grows with T?</div><div class="info-val" id="stat-var">—</div></div>
+  <div class="info-card"><div class="info-label">shocks</div><div class="info-val" id="stat-shock">—</div></div>
+</div>
+
+<div style="margin-bottom:6px;font-size:12px;color:var(--color-text-secondary)">Economic examples:</div>
+<div id="econ-examples"></div>
+<div id="fix-text"></div>
+<div id="warn-text"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const T = 100;
+let currentProc = 'rw';
+let charts = {};
+
+const COLS = {
+  rw:        isDark ? '#F0997B' : '#993c1d',
+  trend:     isDark ? '#85B7EB' : '#185fa5',
+  break:     isDark ? '#EF9F27' : '#854F0B',
+  explosive: isDark ? '#F09595' : '#A32D2D',
+  diff:      isDark ? '#5DCAA5' : '#0F6E56',
+};
+
+const GRID = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+const TICK = isDark ? '#888780' : '#888780';
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+function genSeries(proc){
+  const drift = parseInt(document.getElementById('sl-drift').value)/100;
+  const sigma = parseInt(document.getElementById('sl-sigma').value)/10;
+  const beta  = parseInt(document.getElementById('sl-beta').value)/100;
+  const phiT  = parseInt(document.getElementById('sl-phi-t').value)/100;
+  const brkT  = parseInt(document.getElementById('sl-break').value);
+  const shift = parseInt(document.getElementById('sl-shift').value)/5;
+  const expl  = parseInt(document.getElementById('sl-expl').value)/100;
+
+  const y = [0];
+  if(proc==='rw'){
+    for(let t=1;t<T;t++) y.push(y[t-1]+drift+randn()*sigma);
+  } else if(proc==='trend'){
+    let e=0;
+    for(let t=1;t<T;t++){e=phiT*e+randn();y.push(beta*t+e);}
+  } else if(proc==='break'){
+    let e=0;
+    for(let t=1;t<T;t++){
+      e=0.4*e+randn();
+      y.push(e + (t>=brkT?shift:0));
+    }
+  } else if(proc==='explosive'){
+    for(let t=1;t<T;t++) y.push(expl*y[t-1]+randn()*0.3);
+  }
+  return y;
+}
+
+function diff(y){ return y.slice(1).map((v,i)=>v-y[i]); }
+
+function mkOrUpdate(id, labels, datasets, yLabel){
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  charts[id] = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false}, tooltip:{
+        callbacks:{ label: c => yLabel+': '+c.raw.toFixed(2) }
+      }},
+      scales:{
+        x:{ display:true, grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:6}, title:{display:true,text:'time t',font:{size:10},color:TICK} },
+        y:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:5} }
+      }
+    }
+  });
+}
+
+const META = {
+  rw: {
+    mean:'Non-constant (drifts)', var:'Yes — Var(yₜ) = tσ²', shock:'Permanent',
+    examples:['Stock prices (S&P 500)', 'Exchange rates (USD/EUR)', 'Nominal money supply', 'Nominal wages'],
+    fix:'Fix: first-difference → Δyₜ = yₜ − yₜ₋₁ (returns / inflation / wage growth)',
+    warn:'ADF test: null is unit root. Low power in small samples.',
+  },
+  trend: {
+    mean:'Deterministic — grows as βt', var:'No — bounded around trend', shock:'Transitory (mean-reverts to trend)',
+    examples:['Real GDP (log levels)', 'Labor productivity', 'Population', 'Capital stock'],
+    fix:'Fix: detrend — regress on t, work with residuals. Do NOT difference.',
+    warn:'Differencing a trend-stationary series induces an MA unit root in residuals.',
+  },
+  break: {
+    mean:'Shifts at break point', var:'Stable within regimes', shock:'Transitory within regime',
+    examples:['US inflation (pre/post Volcker 1979)', 'Interest rates (Great Moderation)', 'Oil prices (OPEC 1973, 2014)', 'GDP volatility'],
+    fix:'Fix: include dummy variable at break date, or use Perron (1989) test.',
+    warn:'ADF will falsely find a unit root — it cannot distinguish breaks from I(1).',
+  },
+  explosive: {
+    mean:'Grows geometrically (unbounded)', var:'Explodes', shock:'Amplified (not absorbed)',
+    examples:['Asset price bubbles (housing 2006)', 'Hyperinflation (Weimar, Zimbabwe)', 'Cryptocurrency price episodes', 'Ponzi scheme dynamics'],
+    fix:'Fix: SADF / GSADF tests (Phillips et al. 2011) detect explosive episodes.',
+    warn:'Standard ADF tests cannot detect this — they only test against stationary alternatives.',
+  },
+};
+
+function redraw(){
+  const y = genSeries(currentProc);
+  const dy = diff(y);
+  const col = COLS[currentProc];
+  const labels = Array.from({length:T},(_,i)=>i);
+
+  let extraDatasets = [];
+  if(currentProc==='trend'){
+    const beta = parseInt(document.getElementById('sl-beta').value)/100;
+    extraDatasets = [{
+      data: labels.map(t=>beta*t),
+      borderColor: isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)',
+      borderWidth:1, borderDash:[4,3], pointRadius:0, fill:false
+    }];
+  }
+  if(currentProc==='break'){
+    const brkT = parseInt(document.getElementById('sl-break').value);
+    extraDatasets = [{
+      data: labels.map(t=>t===brkT?-10:null),
+      borderColor: isDark?'rgba(239,159,39,0.5)':'rgba(133,79,11,0.5)',
+      borderWidth:1, borderDash:[3,3], pointRadius:0, fill:false,
+      spanGaps:false
+    }];
+  }
+
+  mkOrUpdate('c-main', labels, [
+    {data:y, borderColor:col, borderWidth:1.5, pointRadius:0, fill:false, tension:0},
+    ...extraDatasets
+  ], 'yₜ');
+
+  const diffLabel = currentProc==='explosive'?'yₜ/yₜ₋₁':'Δyₜ';
+  const diffData  = currentProc==='explosive'
+    ? y.slice(1).map((v,i)=>y[i]!==0?+(v/y[i]).toFixed(4):0)
+    : dy;
+
+  mkOrUpdate('c-diff', labels.slice(1), [
+    {data:diffData, borderColor:COLS.diff, borderWidth:1.2, pointRadius:0, fill:false, tension:0}
+  ], diffLabel);
+
+  const m = META[currentProc];
+  document.getElementById('stat-mean').textContent  = m.mean;
+  document.getElementById('stat-var').textContent   = m.var;
+  document.getElementById('stat-shock').textContent = m.shock;
+  document.getElementById('econ-examples').innerHTML = m.examples.map(e=>`<span class="econ-badge">${e}</span>`).join('');
+  document.getElementById('fix-text').innerHTML  = `<div class="fix-box">${m.fix}</div>`;
+  document.getElementById('warn-text').innerHTML = `<div class="warn-box">${m.warn}</div>`;
+
+  document.querySelector('#c-diff').parentElement.previousElementSibling
+    && (document.querySelector('#c-diff').parentElement.style.marginBottom='12px');
+
+  const diffTitle = document.getElementById('diff-title');
+  if(diffTitle) diffTitle.textContent = currentProc==='explosive' ? 'Growth ratio yₜ/yₜ₋₁' : 'First difference Δyₜ';
+}
+
+function setProc(proc, btn){
+  currentProc = proc;
+  document.querySelectorAll('.proc-tab').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background='';
+    b.style.color='';
+    b.style.borderColor='';
+  });
+  const col = COLS[proc];
+  const bgMap = {
+    rw:'var(--color-background-danger)',
+    trend:'var(--color-background-info)',
+    break:'var(--color-background-warning)',
+    explosive:'var(--color-background-danger)'
+  };
+  btn.classList.add('active');
+  btn.style.background = bgMap[proc];
+  btn.style.color = col;
+  btn.style.borderColor = col;
+
+  ['rw','trend','break','explosive'].forEach(p=>{
+    document.getElementById('ctrl-'+p).style.display = p===proc?'flex':'none';
+  });
+  redraw();
+}
+
+document.getElementById('ctrl-trend').style.display='none';
+document.getElementById('ctrl-break').style.display='none';
+document.getElementById('ctrl-explosive').style.display='none';
+redraw();
+</script>
