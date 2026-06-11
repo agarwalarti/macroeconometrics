@@ -1,0 +1,495 @@
+/* ============================================================
+   Macroeconometric Simulations — Shared Stylesheet
+   agarwalarti.github.io/macroeconometrics/styles.css
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. CSS Variables — light mode
+   ------------------------------------------------------------ */
+:root {
+  /* Backgrounds */
+  --color-background-primary:   #ffffff;
+  --color-background-secondary: #f5f4ef;
+  --color-background-tertiary:  #eeede8;
+  --color-background-info:      #e6f1fb;
+  --color-background-success:   #eaf3de;
+  --color-background-warning:   #faeeda;
+  --color-background-danger:    #fcebeb;
+
+  /* Text */
+  --color-text-primary:   #1a1a18;
+  --color-text-secondary: #5f5e5a;
+  --color-text-tertiary:  #888780;
+  --color-text-info:      #185fa5;
+  --color-text-success:   #3b6d11;
+  --color-text-warning:   #854f0b;
+  --color-text-danger:    #a32d2d;
+
+  /* Borders */
+  --color-border-tertiary:  rgba(0, 0, 0, 0.12);
+  --color-border-secondary: rgba(0, 0, 0, 0.20);
+  --color-border-primary:   rgba(0, 0, 0, 0.30);
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+
+  /* Radii */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+}
+
+/* ------------------------------------------------------------
+   2. CSS Variables — dark mode
+   ------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary:   #1e1e1c;
+    --color-background-secondary: #2a2a27;
+    --color-background-tertiary:  #323230;
+    --color-background-info:      #042c53;
+    --color-background-success:   #173404;
+    --color-background-warning:   #412402;
+    --color-background-danger:    #501313;
+
+    --color-text-primary:   #e8e6dc;
+    --color-text-secondary: #b4b2a9;
+    --color-text-tertiary:  #888780;
+    --color-text-info:      #85b7eb;
+    --color-text-success:   #c0dd97;
+    --color-text-warning:   #fac775;
+    --color-text-danger:    #f09595;
+
+    --color-border-tertiary:  rgba(255, 255, 255, 0.10);
+    --color-border-secondary: rgba(255, 255, 255, 0.18);
+    --color-border-primary:   rgba(255, 255, 255, 0.28);
+  }
+}
+
+/* ------------------------------------------------------------
+   3. Reset and base
+   ------------------------------------------------------------ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.65;
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  padding: 1.5rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------
+   4. Cards and panels
+   ------------------------------------------------------------ */
+.card {
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+  padding: 1rem 1.25rem;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.panel {
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 12px;
+}
+
+.panel-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.panel-eq {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+  margin-bottom: 10px;
+}
+
+/* ------------------------------------------------------------
+   5. Layout utilities
+   ------------------------------------------------------------ */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* ------------------------------------------------------------
+   6. Controls — sliders, selects, buttons
+   ------------------------------------------------------------ */
+.ctrl-lbl {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.ctrl-val {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  min-width: 36px;
+  font-family: var(--font-mono);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-secondary);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+  cursor: pointer;
+  border: 2px solid var(--color-background-primary);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+  cursor: pointer;
+  border: 2px solid var(--color-background-primary);
+}
+
+select {
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+select:hover {
+  border-color: var(--color-border-primary);
+}
+
+button {
+  font-size: 12px;
+  padding: 5px 16px;
+  cursor: pointer;
+  border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  transition: background 0.12s;
+}
+
+button:hover {
+  background: var(--color-background-secondary);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------
+   7. Badges and pills
+   ------------------------------------------------------------ */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  margin: 2px;
+}
+
+.badge-ok      { background: var(--color-background-success); color: var(--color-text-success); }
+.badge-warn    { background: var(--color-background-danger);  color: var(--color-text-danger); }
+.badge-info    { background: var(--color-background-info);    color: var(--color-text-info); }
+.badge-neutral { background: var(--color-background-tertiary); color: var(--color-text-secondary); }
+
+.prop-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------------
+   8. Stat / metric cards
+   ------------------------------------------------------------ */
+.stat-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 14px;
+  flex: 1;
+  min-width: 100px;
+  border: 0.5px solid var(--color-border-tertiary);
+}
+
+.stat-lbl {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+  margin-bottom: 3px;
+}
+
+.stat-val {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ------------------------------------------------------------
+   9. Tables
+   ------------------------------------------------------------ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+thead tr {
+  border-bottom: 0.5px solid var(--color-border-secondary);
+}
+
+th {
+  text-align: left;
+  padding: 4px 8px;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+td {
+  padding: 5px 8px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  color: var(--color-text-primary);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* ------------------------------------------------------------
+   10. Legend row (for charts)
+   ------------------------------------------------------------ */
+.legend-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-sq {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+   11. Info / warning / fix boxes
+   ------------------------------------------------------------ */
+.box-fix {
+  background: var(--color-background-success);
+  border-radius: var(--border-radius-md);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-success);
+  margin-top: 10px;
+  font-family: var(--font-mono);
+}
+
+.box-warn {
+  background: var(--color-background-warning);
+  border-radius: var(--border-radius-md);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-warning);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+.box-info {
+  background: var(--color-background-info);
+  border-radius: var(--border-radius-md);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-info);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+.box-danger {
+  background: var(--color-background-danger);
+  border-radius: var(--border-radius-md);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-danger);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+/* ------------------------------------------------------------
+   12. Process / tab buttons
+   ------------------------------------------------------------ */
+.proc-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.proc-tab {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.12s;
+}
+
+.proc-tab:hover {
+  background: var(--color-background-secondary);
+}
+
+/* ------------------------------------------------------------
+   13. Canvas wrapper
+   ------------------------------------------------------------ */
+.chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------
+   14. Monospace / formula text
+   ------------------------------------------------------------ */
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-primary);
+  line-height: 1.8;
+}
+
+.formula {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-background-tertiary);
+  border-radius: var(--border-radius-sm);
+  padding: 2px 6px;
+}
+
+/* ------------------------------------------------------------
+   15. Screen-reader only utility
+   ------------------------------------------------------------ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------
+   16. Responsive — narrow screens
+   ------------------------------------------------------------ */
+@media (max-width: 600px) {
+  body {
+    padding: 1rem;
+  }
+
+  .grid2, .grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-row {
+    flex-direction: column;
+  }
+}
