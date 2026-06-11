@@ -1,0 +1,274 @@
+
+<style>
+.tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.tab { font-size:12px; padding:5px 14px; border-radius:20px; border:0.5px solid var(--color-border-secondary); background:var(--color-background-primary); color:var(--color-text-secondary); cursor:pointer; transition:all 0.12s; }
+.tab.active { background:var(--color-background-danger); color:#993c1d; border-color:#993c1d; }
+.card { background:var(--color-background-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem; margin-bottom:12px; }
+.ct { font-size:13px; font-weight:500; color:var(--color-text-secondary); margin-bottom:6px; }
+.eq { font-family:var(--font-mono); font-size:12px; color:var(--color-text-tertiary); margin-bottom:10px; padding:6px 10px; background:var(--color-background-primary); border-radius:var(--border-radius-md); border:0.5px solid var(--color-border-tertiary); }
+.row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.lbl { font-size:12px; color:var(--color-text-secondary); white-space:nowrap; }
+.val { font-size:12px; font-weight:500; min-width:36px; font-family:var(--font-mono); color:var(--color-text-primary); }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.fix { background:var(--color-background-success); border-radius:var(--border-radius-md); padding:7px 12px; font-size:12px; color:var(--color-text-success); font-family:var(--font-mono); margin-top:8px; }
+.insight { background:var(--color-background-info); border-radius:var(--border-radius-md); padding:7px 12px; font-size:12px; color:var(--color-text-info); font-family:var(--font-mono); margin-top:6px; }
+.econ { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.ebadge { font-size:11px; padding:3px 9px; border-radius:20px; background:var(--color-background-tertiary); color:var(--color-text-secondary); border:0.5px solid var(--color-border-tertiary); }
+</style>
+
+<h2 class="sr-only">Types of unit root processes with interactive simulations</h2>
+
+<div class="tabs">
+  <button class="tab active" onclick="setType('rw',this)">Pure random walk</button>
+  <button class="tab" onclick="setType('rwd',this)">RW with drift</button>
+  <button class="tab" onclick="setType('arima',this)">ARIMA(p,1,q)</button>
+  <button class="tab" onclick="setType('i2',this)">I(2) double unit root</button>
+  <button class="tab" onclick="setType('seasonal',this)">Seasonal unit root</button>
+  <button class="tab" onclick="setType('ltu',this)">Near unit root</button>
+</div>
+
+<div id="desc-rw">
+  <div class="eq">y_t = y_{t-1} + ε_t &nbsp;|&nbsp; lag poly: (1−L) = 0 → root z = 1</div>
+  <div class="row">
+    <span class="lbl">σ =</span>
+    <input type="range" id="sl-rw-s" min="5" max="25" value="10" step="1" style="width:110px" oninput="document.getElementById('v-rw-s').textContent=(this.value/10).toFixed(1);draw()">
+    <span class="val" id="v-rw-s">1.0</span>
+    <button onclick="draw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+  </div>
+  <div class="fix">Fix: first-difference Δy_t = y_t − y_{t-1} → white noise</div>
+  <div class="econ"><span class="ebadge">Exchange rates</span><span class="ebadge">Stock prices</span><span class="ebadge">Nominal money supply</span></div>
+</div>
+
+<div id="desc-rwd" style="display:none">
+  <div class="eq">y_t = μ + y_{t-1} + ε_t &nbsp;|&nbsp; same unit root; μ adds deterministic drift</div>
+  <div class="row">
+    <span class="lbl">drift μ =</span>
+    <input type="range" id="sl-d" min="-20" max="20" value="8" step="1" style="width:110px" oninput="document.getElementById('v-d').textContent=(this.value/100).toFixed(2);draw()">
+    <span class="val" id="v-d">0.08</span>
+    <button onclick="draw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+  </div>
+  <div class="fix">Fix: first-difference → Δy_t = μ + ε_t (white noise around constant)</div>
+  <div class="insight">Note: ADF with no intercept will miss the drift — always include constant in test regression</div>
+  <div class="econ"><span class="ebadge">GDP in levels</span><span class="ebadge">Nominal wages</span><span class="ebadge">Price level</span></div>
+</div>
+
+<div id="desc-arima" style="display:none">
+  <div class="eq">Φ(L)(1−L)y_t = Θ(L)ε_t &nbsp;|&nbsp; ARMA dynamics wrap around the unit root</div>
+  <div class="row">
+    <span class="lbl">AR φ =</span>
+    <input type="range" id="sl-ar" min="-70" max="70" value="40" step="5" style="width:100px" oninput="document.getElementById('v-ar').textContent=(this.value/100).toFixed(2);draw()">
+    <span class="val" id="v-ar">0.40</span>
+    <span class="lbl">MA θ =</span>
+    <input type="range" id="sl-ma" min="-70" max="70" value="30" step="5" style="width:100px" oninput="document.getElementById('v-ma').textContent=(this.value/100).toFixed(2);draw()">
+    <span class="val" id="v-ma">0.30</span>
+    <button onclick="draw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+  </div>
+  <div class="fix">Fix: first-difference → stationary ARMA(p,q) in Δy_t</div>
+  <div class="insight">Key insight: the differenced series has rich autocorrelation structure — not just white noise</div>
+  <div class="econ"><span class="ebadge">Interest rates</span><span class="ebadge">Real GDP</span><span class="ebadge">Unemployment</span></div>
+</div>
+
+<div id="desc-i2" style="display:none">
+  <div class="eq">(1−L)²y_t = ε_t &nbsp;|&nbsp; two unit roots; lag poly has z=1 as double root</div>
+  <div class="row">
+    <span class="lbl">σ =</span>
+    <input type="range" id="sl-i2s" min="3" max="15" value="6" step="1" style="width:110px" oninput="document.getElementById('v-i2s').textContent=(this.value/10).toFixed(1);draw()">
+    <span class="val" id="v-i2s">0.6</span>
+    <button onclick="draw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+  </div>
+  <div class="fix">Fix: difference twice — Δ²y_t = Δy_t − Δy_{t-1} → stationary</div>
+  <div class="insight">I(2) means: Δy_t is itself I(1). Price levels may be I(2); inflation I(1); Δinflation I(0)</div>
+  <div class="econ"><span class="ebadge">Price level (some views)</span><span class="ebadge">Nominal interest rates</span></div>
+</div>
+
+<div id="desc-seasonal" style="display:none">
+  <div class="eq">y_t = y_{t-4} + ε_t (quarterly) &nbsp;|&nbsp; seasonal lag poly: (1−L⁴) = 0</div>
+  <div class="row">
+    <span class="lbl">Season s =</span>
+    <select id="sl-seas" onchange="draw()" style="font-size:12px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">
+      <option value="4">4 (quarterly)</option>
+      <option value="12">12 (monthly)</option>
+    </select>
+    <button onclick="draw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+  </div>
+  <div class="fix">Fix: seasonal difference — Δ_s y_t = y_t − y_{t-s}</div>
+  <div class="insight">(1−L⁴) factors as (1−L)(1+L)(1+L²) — roots at z=1, −1, ±i — all on unit circle</div>
+  <div class="econ"><span class="ebadge">Retail sales</span><span class="ebadge">Agricultural output</span><span class="ebadge">Tourism</span></div>
+</div>
+
+<div id="desc-ltu" style="display:none">
+  <div class="eq">y_t = φ_T · y_{t-1} + ε_t &nbsp;|&nbsp; φ_T = 1 − c/T, c ≥ 0</div>
+  <div class="row">
+    <span class="lbl">c =</span>
+    <input type="range" id="sl-c" min="0" max="20" value="5" step="1" style="width:120px" oninput="document.getElementById('v-c').textContent=this.value;draw()">
+    <span class="val" id="v-c">5</span>
+    <span style="font-size:12px;color:var(--color-text-tertiary)">(c=0 → unit root; c large → stationary)</span>
+    <button onclick="draw()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+  </div>
+  <div class="insight">ADF cannot distinguish this from a true unit root in finite samples — a fundamental identification problem</div>
+  <div class="fix">Approach: Elliott-Rothenberg-Stock (1996) GLS-detrended test has higher power near unit root</div>
+  <div class="econ"><span class="ebadge">Real exchange rates (PPP)</span><span class="ebadge">Output gaps</span><span class="ebadge">Inflation persistence</span></div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="ct">Levels series</div>
+    <div style="position:relative;width:100%;height:190px"><canvas id="c-levels" role="img" aria-label="Simulated levels of the selected unit root process type"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="ct">After transformation (differenced / deseasonalised)</div>
+    <div style="position:relative;width:100%;height:190px"><canvas id="c-diff" role="img" aria-label="Transformed series after applying the appropriate fix for the unit root"></canvas></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ct">Characteristic roots in the complex plane — unit circle boundary</div>
+  <div style="position:relative;width:100%;height:180px"><canvas id="c-roots" role="img" aria-label="Characteristic roots plotted in complex plane relative to unit circle"></canvas></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const COL_L  = '#993c1d';
+const COL_D  = '#0f6e56';
+const COL_CI = isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)';
+const GRID   = isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)';
+const TICK   = isDark?'#888780':'#888780';
+let charts={}, curType='rw';
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+function genSeries(type, T=150){
+  const sigma = parseInt(document.getElementById('sl-rw-s')?.value||10)/10;
+  const drift = parseInt(document.getElementById('sl-d')?.value||0)/100;
+  const phi   = parseInt(document.getElementById('sl-ar')?.value||0)/100;
+  const theta = parseInt(document.getElementById('sl-ma')?.value||0)/100;
+  const i2s   = parseInt(document.getElementById('sl-i2s')?.value||6)/10;
+  const seas  = parseInt(document.getElementById('sl-seas')?.value||4);
+  const c     = parseInt(document.getElementById('sl-c')?.value||5);
+
+  let y=[0,0,0,0,0,0,0,0,0,0,0,0];
+  const full=[];
+
+  if(type==='rw'){
+    y=[0]; for(let t=1;t<T;t++) y.push(y[t-1]+randn()*sigma);
+  } else if(type==='rwd'){
+    y=[0]; for(let t=1;t<T;t++) y.push(drift+y[t-1]+randn());
+  } else if(type==='arima'){
+    let diffs=[0],prev_e=0;
+    for(let t=1;t<T;t++){const e=randn();diffs.push(phi*diffs[t-1]+e+theta*prev_e);prev_e=e;}
+    y=[0]; for(let t=1;t<T;t++) y.push(y[t-1]+diffs[t]);
+  } else if(type==='i2'){
+    let d1=[0];
+    for(let t=1;t<T;t++) d1.push(d1[t-1]+randn()*i2s);
+    y=[0]; for(let t=1;t<T;t++) y.push(y[t-1]+d1[t]);
+  } else if(type==='seasonal'){
+    y=Array(seas).fill(0);
+    for(let t=seas;t<T;t++) y.push(y[t-seas]+randn());
+  } else if(type==='ltu'){
+    const phiT=1-c/T;
+    y=[0]; for(let t=1;t<T;t++) y.push(phiT*y[t-1]+randn());
+  }
+  return y.slice(0,T);
+}
+
+function applyFix(type, y){
+  const seas = parseInt(document.getElementById('sl-seas')?.value||4);
+  if(type==='seasonal') return y.slice(seas).map((v,i)=>v-y[i]);
+  if(type==='i2'){
+    const d1=y.slice(1).map((v,i)=>v-y[i]);
+    return d1.slice(1).map((v,i)=>v-d1[i]);
+  }
+  return y.slice(1).map((v,i)=>v-y[i]);
+}
+
+function mkChart(id,type,data,label,yLabel){
+  if(charts[id]) charts[id].destroy();
+  const T=data.length;
+  const labels=Array.from({length:T},(_,i)=>i);
+  charts[id]=new Chart(document.getElementById(id),{
+    type:'line',
+    data:{labels,datasets:[{data,borderColor:type==='levels'?COL_L:COL_D,borderWidth:1.4,pointRadius:0,fill:false,tension:0}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:GRID},ticks:{font:{size:10},color:TICK,maxTicksLimit:6},title:{display:true,text:'t',font:{size:10},color:TICK}},
+        y:{grid:{color:GRID},ticks:{font:{size:10},color:TICK,maxTicksLimit:5},title:{display:true,text:yLabel,font:{size:10},color:TICK}}
+      }}
+  });
+}
+
+function drawRoots(type){
+  if(charts['c-roots']) charts['c-roots'].destroy();
+  const N=200;
+  const circleX=[], circleY=[];
+  for(let i=0;i<=N;i++){circleX.push(Math.cos(2*Math.PI*i/N));circleY.push(Math.sin(2*Math.PI*i/N));}
+
+  const roots=[];
+  if(type==='rw'||type==='rwd'||type==='ltu'||type==='arima'){
+    roots.push({x:1,y:0,label:'z=1',col:COL_L});
+  }
+  if(type==='arima'){
+    const phi=parseInt(document.getElementById('sl-ar').value)/100;
+    if(Math.abs(phi)>0.05) roots.push({x:1/phi,y:0,label:'AR root',col:'#185fa5'});
+  }
+  if(type==='i2'){
+    roots.push({x:1,y:0.08,label:'z=1 (×2)',col:COL_L});
+    roots.push({x:1,y:-0.08,label:'',col:COL_L});
+  }
+  if(type==='seasonal'){
+    const seas=parseInt(document.getElementById('sl-seas').value);
+    if(seas===4){
+      roots.push({x:1,y:0,label:'z=1',col:COL_L});
+      roots.push({x:-1,y:0,label:'z=−1',col:'#185fa5'});
+      roots.push({x:0,y:1,label:'z=i',col:'#854f0b'});
+      roots.push({x:0,y:-1,label:'z=−i',col:'#854f0b'});
+    } else {
+      for(let k=0;k<12;k++){
+        const angle=2*Math.PI*k/12;
+        roots.push({x:Math.cos(angle),y:Math.sin(angle),label:k===0?'z=1':'',col:k===0?COL_L:'#185fa5'});
+      }
+    }
+  }
+
+  charts['c-roots']=new Chart(document.getElementById('c-roots'),{
+    type:'scatter',
+    data:{datasets:[
+      {data:circleX.map((x,i)=>({x,y:circleY[i]})),type:'line',borderColor:isDark?'rgba(136,135,128,0.35)':'rgba(136,135,128,0.3)',borderWidth:1,pointRadius:0,fill:false,showLine:true},
+      {data:[{x:-1.5,y:0},{x:1.5,y:0}],type:'line',borderColor:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)',borderWidth:0.5,pointRadius:0,fill:false,showLine:true,borderDash:[2,3]},
+      {data:[{x:0,y:-1.5},{x:0,y:1.5}],type:'line',borderColor:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)',borderWidth:0.5,pointRadius:0,fill:false,showLine:true,borderDash:[2,3]},
+      {data:roots.map(r=>({x:r.x,y:r.y})),backgroundColor:roots.map(r=>r.col),pointRadius:7,pointStyle:'circle'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const r=roots[c.dataIndex];return r&&r.label?r.label:`(${c.parsed.x.toFixed(2)}, ${c.parsed.y.toFixed(2)})`;},filter:(i)=>i.datasetIndex===3}}},
+      scales:{
+        x:{min:-1.6,max:1.6,grid:{color:GRID},ticks:{font:{size:10},color:TICK,stepSize:0.5},title:{display:true,text:'Re(z)',font:{size:10},color:TICK}},
+        y:{min:-1.6,max:1.6,grid:{color:GRID},ticks:{font:{size:10},color:TICK,stepSize:0.5},title:{display:true,text:'Im(z)',font:{size:10},color:TICK}}
+      }}
+  });
+}
+
+function draw(){
+  const y=genSeries(curType);
+  const dy=applyFix(curType,y);
+  const diffLabel={'rw':'Δy_t','rwd':'Δy_t','arima':'Δy_t','i2':'Δ²y_t','seasonal':'Δ_s y_t','ltu':'Δy_t'};
+  mkChart('c-levels','levels',y,'Levels','y_t');
+  mkChart('c-diff','diff',dy,'Differenced',diffLabel[curType]||'Δy_t');
+  drawRoots(curType);
+}
+
+function setType(type, btn){
+  curType=type;
+  document.querySelectorAll('.tab').forEach(b=>{b.classList.remove('active');b.style.background='';b.style.color='';b.style.borderColor='';});
+  btn.classList.add('active');
+  btn.style.background='var(--color-background-danger)';
+  btn.style.color='#993c1d';
+  btn.style.borderColor='#993c1d';
+  ['rw','rwd','arima','i2','seasonal','ltu'].forEach(t=>{
+    document.getElementById('desc-'+t).style.display=t===type?'block':'none';
+  });
+  draw();
+}
+
+draw();
+</script>
