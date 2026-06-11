@@ -1,0 +1,274 @@
+
+<style>
+.card { background:var(--color-background-secondary); border-radius:var(--border-radius-lg); padding:1rem 1.25rem; margin-bottom:12px; }
+.ct { font-size:13px; font-weight:500; color:var(--color-text-secondary); margin-bottom:8px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.lbl { font-size:12px; color:var(--color-text-secondary); }
+.val { font-size:12px; font-weight:500; min-width:30px; color:var(--color-text-primary); }
+.leg { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--color-text-secondary); }
+.leg-sq { width:10px; height:10px; border-radius:2px; }
+.stat-row { display:flex; gap:10px; margin-bottom:12px; }
+.stat { background:var(--color-background-primary); border-radius:var(--border-radius-md); padding:10px 14px; flex:1; border:0.5px solid var(--color-border-tertiary); }
+.stat-lbl { font-size:11px; color:var(--color-text-tertiary); font-family:var(--font-mono); margin-bottom:3px; }
+.stat-val { font-size:15px; font-weight:500; color:var(--color-text-primary); font-family:var(--font-mono); }
+</style>
+
+<h2 class="sr-only">Unit root statistical properties: variance growth, impulse response, and Dickey-Fuller distribution</h2>
+
+<div class="row">
+  <span class="lbl">T =</span>
+  <input type="range" id="sl-T" min="50" max="400" value="150" step="10" style="width:120px" oninput="document.getElementById('v-T').textContent=this.value;update()">
+  <span class="val" id="v-T">150</span>
+  <span class="lbl">σ =</span>
+  <input type="range" id="sl-sig" min="5" max="25" value="10" step="1" style="width:100px" oninput="document.getElementById('v-sig').textContent=(this.value/10).toFixed(1);update()">
+  <span class="val" id="v-sig">1.0</span>
+  <span class="lbl">Drift =</span>
+  <input type="range" id="sl-drift" min="-10" max="10" value="0" step="1" style="width:100px" oninput="document.getElementById('v-drift').textContent=(this.value/100).toFixed(2);update()">
+  <span class="val" id="v-drift">0.00</span>
+  <button onclick="update()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻</button>
+</div>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-lbl">Var(y_T)</div><div class="stat-val" id="sv-var">—</div></div>
+  <div class="stat"><div class="stat-lbl">theoretical = T·σ²</div><div class="stat-val" id="sv-theory">—</div></div>
+  <div class="stat"><div class="stat-lbl">IRF at h=∞</div><div class="stat-val" id="sv-irf">1.000</div></div>
+  <div class="stat"><div class="stat-lbl">ADF critical (5%)</div><div class="stat-val" id="sv-crit">−2.86</div></div>
+</div>
+
+<div class="card">
+  <div class="ct">Property 1 — Variance grows linearly: five random walk paths with theoretical ±2σ√t envelope</div>
+  <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
+    <span class="leg"><span class="leg-sq" style="background:#993c1d"></span>Paths (5 simulations)</span>
+    <span class="leg"><span class="leg-sq" style="background:#185fa5;opacity:0.3"></span>±2σ√t envelope</span>
+    <span class="leg"><span class="leg-sq" style="background:#3b6d11"></span>Stationary AR(1) φ=0.7</span>
+  </div>
+  <div style="position:relative;width:100%;height:200px"><canvas id="c-var" role="img" aria-label="Five random walk paths with expanding variance envelope compared to bounded stationary process"></canvas></div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="ct">Property 2 — Impulse response function</div>
+    <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+      <span class="leg"><span class="leg-sq" style="background:#993c1d"></span>Unit root (φ=1)</span>
+      <span class="leg"><span class="leg-sq" style="background:#3b6d11"></span>AR(1) φ=0.7</span>
+      <span class="leg"><span class="leg-sq" style="background:#185fa5"></span>AR(1) φ=0.9</span>
+    </div>
+    <div style="position:relative;width:100%;height:180px"><canvas id="c-irf" role="img" aria-label="Impulse response functions comparing unit root permanent shock to decaying AR responses"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="ct">Property 3 — Dickey-Fuller vs normal distribution</div>
+    <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+      <span class="leg"><span class="leg-sq" style="background:#993c1d"></span>DF distribution</span>
+      <span class="leg"><span class="leg-sq" style="background:#888780"></span>N(0,1)</span>
+    </div>
+    <div style="position:relative;width:100%;height:180px"><canvas id="c-df" role="img" aria-label="Comparison of Dickey-Fuller distribution to standard normal, showing left skew and heavier tails"></canvas></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ct">Property 4 — Spurious regression: R² between two independent random walks</div>
+  <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
+    <span class="leg"><span class="leg-sq" style="background:#993c1d"></span>R² (should be ≈ 0)</span>
+    <span class="leg"><span class="leg-sq" style="background:#3b6d11"></span>R² from two independent stationary series</span>
+  </div>
+  <div id="spur-note" style="font-size:12px;color:var(--color-text-danger);font-family:var(--font-mono);margin-bottom:8px"></div>
+  <div style="position:relative;width:100%;height:160px"><canvas id="c-spur" role="img" aria-label="R-squared from regressing independent random walks showing spurious high values"></canvas></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const COL_RW   = '#993c1d';
+const COL_AR7  = '#3b6d11';
+const COL_AR9  = '#185fa5';
+const COL_ENV  = isDark ? 'rgba(24,95,165,0.15)' : 'rgba(24,95,165,0.12)';
+const COL_ENV2 = isDark ? 'rgba(24,95,165,0.25)' : 'rgba(24,95,165,0.2)';
+const COL_DF   = '#993c1d';
+const COL_NRM  = isDark ? '#888780' : '#5f5e5a';
+const GRID     = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+const TICK     = isDark ? '#888780' : '#888780';
+let charts = {};
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+function mkChart(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+
+function baseOpts(xLabel, yLabel){
+  return {
+    responsive:true, maintainAspectRatio:false, animation:false,
+    plugins:{ legend:{display:false} },
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:7}, title:{display:!!xLabel,text:xLabel,font:{size:10},color:TICK} },
+      y:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:5}, title:{display:!!yLabel,text:yLabel,font:{size:10},color:TICK} }
+    }
+  };
+}
+
+function getParams(){
+  const T     = parseInt(document.getElementById('sl-T').value);
+  const sigma = parseInt(document.getElementById('sl-sig').value)/10;
+  const drift = parseInt(document.getElementById('sl-drift').value)/100;
+  return {T, sigma, drift};
+}
+
+function drawVariance(){
+  const {T, sigma, drift} = getParams();
+  const NPATHS = 5;
+  const labels = Array.from({length:T},(_,i)=>i);
+
+  const datasets = [];
+
+  // Envelope fill (upper)
+  datasets.push({ data: labels.map(t => drift*t + 2*sigma*Math.sqrt(t||0.01)), borderColor:'transparent', backgroundColor:COL_ENV2, fill:'+1', pointRadius:0, tension:0, borderWidth:0 });
+  // Envelope fill (lower)
+  datasets.push({ data: labels.map(t => drift*t - 2*sigma*Math.sqrt(t||0.01)), borderColor:isDark?'rgba(24,95,165,0.4)':'rgba(24,95,165,0.35)', backgroundColor:COL_ENV, fill:false, pointRadius:0, tension:0, borderWidth:0.8, borderDash:[4,3] });
+  // Upper line
+  datasets.push({ data: labels.map(t => drift*t + 2*sigma*Math.sqrt(t||0.01)), borderColor:isDark?'rgba(24,95,165,0.4)':'rgba(24,95,165,0.35)', fill:false, pointRadius:0, tension:0, borderWidth:0.8, borderDash:[4,3] });
+
+  // Stationary AR(1) for comparison
+  const ar=[0]; for(let t=1;t<T;t++) ar.push(0.7*ar[t-1]+randn()*sigma);
+  datasets.push({ data:ar, borderColor:COL_AR7, borderWidth:1, pointRadius:0, fill:false, tension:0, borderDash:[2,3] });
+
+  // RW paths
+  for(let p=0;p<NPATHS;p++){
+    const y=[0]; for(let t=1;t<T;t++) y.push(y[t-1]+drift+randn()*sigma);
+    datasets.push({ data:y, borderColor:COL_RW, borderWidth:p===0?1.5:0.8, pointRadius:0, fill:false, tension:0, borderDash:[] });
+  }
+
+  // Stat cards
+  const lastPath = datasets[datasets.length-1].data;
+  const empirVar = lastPath.reduce((s,v)=>s+(v-lastPath.reduce((a,b)=>a+b,0)/T)**2,0)/T;
+  document.getElementById('sv-var').textContent = empirVar.toFixed(2);
+  document.getElementById('sv-theory').textContent = (T*sigma*sigma).toFixed(2);
+
+  const opts = baseOpts('time t', 'yₜ');
+  opts.plugins.tooltip = { callbacks:{ label: c => c.raw.toFixed(2) } };
+  mkChart('c-var', { type:'line', data:{labels, datasets}, options:opts });
+}
+
+function drawIRF(){
+  const H = 20;
+  const labels = Array.from({length:H+1},(_,i)=>i);
+  mkChart('c-irf', {
+    type:'line',
+    data:{ labels, datasets:[
+      { data:labels.map(()=>1), borderColor:COL_RW, borderWidth:2, pointRadius:2, fill:false, label:'φ=1' },
+      { data:labels.map(h=>Math.pow(0.9,h)), borderColor:COL_AR9, borderWidth:1.5, pointRadius:2, fill:false, borderDash:[3,2], label:'φ=0.9' },
+      { data:labels.map(h=>Math.pow(0.7,h)), borderColor:COL_AR7, borderWidth:1.5, pointRadius:2, fill:false, borderDash:[4,3], label:'φ=0.7' },
+    ]},
+    options:{ ...baseOpts('horizon h', 'response'),
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:6}, title:{display:true,text:'horizon h',font:{size:10},color:TICK} },
+        y:{ min:0, max:1.05, grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:5}, title:{display:true,text:'IRF',font:{size:10},color:TICK} }
+      },
+      animation:false, responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} }
+    }
+  });
+}
+
+function normalPDF(x){ return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI); }
+
+function dfPDF(x){
+  // Approximate DF(τ) density using gamma/shifted distribution fit
+  // DF distribution ~ location −0.5, scale ~0.55, slight left skew
+  // We use a simple mixture approximation
+  const mu=-0.5, s=0.55, sk=0.4;
+  const z=(x-mu)/s;
+  return (1/s)*normalPDF(z)*(1+sk*(z**3-3*z)/6);
+}
+
+function drawDF(){
+  const xs=[], dn=[], nn=[];
+  for(let x=-5;x<=3;x+=0.1){
+    xs.push(x.toFixed(1));
+    dn.push(Math.max(0, dfPDF(x)));
+    nn.push(normalPDF(x));
+  }
+  const cv_df=-2.86, cv_n=-1.65;
+  mkChart('c-df',{
+    type:'line',
+    data:{ labels:xs, datasets:[
+      { data:dn, borderColor:COL_DF, borderWidth:2, pointRadius:0, fill:true, backgroundColor:isDark?'rgba(153,60,29,0.1)':'rgba(153,60,29,0.08)', tension:0.3 },
+      { data:nn, borderColor:COL_NRM, borderWidth:1.5, pointRadius:0, fill:false, borderDash:[4,3], tension:0.3 },
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{
+        legend:{display:false},
+        annotation:{annotations:{
+          cv1:{ type:'line', xMin:cv_df, xMax:cv_df, borderColor:COL_DF, borderWidth:1, borderDash:[3,3] },
+          cv2:{ type:'line', xMin:cv_n, xMax:cv_n, borderColor:COL_NRM, borderWidth:1, borderDash:[3,3] }
+        }}
+      },
+      scales:{
+        x:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:8}, title:{display:true,text:'t-statistic',font:{size:10},color:TICK} },
+        y:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:4}, title:{display:true,text:'density',font:{size:10},color:TICK} }
+      }
+    }
+  });
+}
+
+function drawSpurious(){
+  const {T} = getParams();
+  const NREP = 80;
+  const r2_rw=[], r2_stat=[];
+
+  for(let r=0;r<NREP;r++){
+    // Two independent RWs
+    const x1=[0],y1=[0];
+    for(let t=1;t<T;t++){x1.push(x1[t-1]+randn());y1.push(y1[t-1]+randn());}
+    r2_rw.push(corrSq(x1,y1));
+    // Two independent stationary
+    const x2=[0],y2=[0];
+    for(let t=1;t<T;t++){x2.push(0.5*x2[t-1]+randn());y2.push(0.5*y2[t-1]+randn());}
+    r2_stat.push(corrSq(x2,y2));
+  }
+
+  const meanRW = r2_rw.reduce((a,b)=>a+b,0)/NREP;
+  const meanStat = r2_stat.reduce((a,b)=>a+b,0)/NREP;
+  document.getElementById('spur-note').textContent =
+    `Mean R² from independent random walks: ${meanRW.toFixed(3)} (should be ≈ 0) | Stationary: ${meanStat.toFixed(3)}`;
+
+  const labels = Array.from({length:NREP},(_,i)=>i+1);
+  mkChart('c-spur',{
+    type:'scatter',
+    data:{ datasets:[
+      { data:r2_rw.map((v,i)=>({x:i+1,y:v})), backgroundColor:COL_RW, pointRadius:3, pointStyle:'circle' },
+      { data:r2_stat.map((v,i)=>({x:i+1,y:v})), backgroundColor:COL_AR7, pointRadius:3, pointStyle:'circle' },
+      { data:[{x:1,y:1/NREP},{x:NREP,y:1/NREP}], type:'line', borderColor:isDark?'rgba(136,135,128,0.4)':'rgba(136,135,128,0.35)', borderDash:[3,3], borderWidth:1, pointRadius:0, fill:false }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>'R²='+c.parsed.y.toFixed(3)}} },
+      scales:{
+        x:{ grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:6}, title:{display:true,text:'simulation #',font:{size:10},color:TICK} },
+        y:{ min:0, max:1, grid:{color:GRID}, ticks:{font:{size:10},color:TICK,maxTicksLimit:5}, title:{display:true,text:'R²',font:{size:10},color:TICK} }
+      }
+    }
+  });
+}
+
+function corrSq(x,y){
+  const n=x.length;
+  const mx=x.reduce((a,b)=>a+b,0)/n, my=y.reduce((a,b)=>a+b,0)/n;
+  const num=x.reduce((s,v,i)=>s+(v-mx)*(y[i]-my),0);
+  const dx=Math.sqrt(x.reduce((s,v)=>s+(v-mx)**2,0));
+  const dy=Math.sqrt(y.reduce((s,v)=>s+(v-my)**2,0));
+  return (num/(dx*dy))**2||0;
+}
+
+function update(){
+  drawVariance();
+  drawIRF();
+  drawDF();
+  drawSpurious();
+}
+
+update();
+</script>
