@@ -1,0 +1,268 @@
+
+<style>
+.card{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:12px;}
+.ct{font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px;}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.lbl{font-size:12px;color:var(--color-text-secondary);white-space:nowrap;}
+.val{font-family:var(--font-mono);font-size:12px;font-weight:500;min-width:36px;color:var(--color-text-primary);}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;}
+.stat-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.stat{background:var(--color-background-primary);border-radius:var(--border-radius-md);padding:10px 14px;flex:1;min-width:120px;border:0.5px solid var(--color-border-tertiary);}
+.stat-lbl{font-size:11px;color:var(--color-text-tertiary);font-family:var(--font-mono);margin-bottom:3px;}
+.stat-val{font-size:15px;font-weight:500;color:var(--color-text-primary);font-family:var(--font-mono);}
+.verdict{font-size:12px;font-weight:500;padding:6px 12px;border-radius:var(--border-radius-md);margin-top:4px;font-family:var(--font-mono);display:inline-block;}
+.v-rej{background:var(--color-background-success);color:var(--color-text-success);}
+.v-fail{background:var(--color-background-danger);color:var(--color-text-danger);}
+.leg{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+.li{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary);}
+.ls{width:10px;height:10px;border-radius:2px;}
+.matrix{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden;font-size:12px;}
+.mcell{background:var(--color-background-primary);padding:8px 10px;}
+.mhead{background:var(--color-background-tertiary);font-weight:500;color:var(--color-text-secondary);text-align:center;}
+</style>
+
+<h2 class="sr-only">ADF and KPSS unit root tests applied to a simulated series with computed statistics and Dickey-Fuller distribution</h2>
+
+<div class="row">
+  <span class="lbl">Process φ =</span>
+  <input type="range" id="sl-phi" min="60" max="100" value="100" step="1" style="width:140px" oninput="document.getElementById('v-phi').textContent=(this.value/100).toFixed(2);run()">
+  <span class="val" id="v-phi">1.00</span>
+  <span class="lbl">T =</span>
+  <select id="sel-T" onchange="run()" style="font-size:12px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">
+    <option value="60">60</option>
+    <option value="100" selected>100</option>
+    <option value="250">250</option>
+  </select>
+  <span class="lbl">trend?</span>
+  <input type="checkbox" id="chk-trend" onchange="run()">
+  <button onclick="resim()" style="font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)">↻ resim</button>
+</div>
+
+<div class="card">
+  <div class="ct">Simulated series</div>
+  <div style="position:relative;width:100%;height:140px"><canvas id="c-series" role="img" aria-label="Simulated time series used for unit root testing"></canvas></div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="ct">ADF test</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-lbl">δ̂ (coef on yₜ₋₁ in Δyₜ regression)</div><div class="stat-val" id="adf-delta">—</div></div>
+      <div class="stat"><div class="stat-lbl">t-statistic</div><div class="stat-val" id="adf-t">—</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;font-family:var(--font-mono)">H₀: unit root (δ=0)  |  5% critical value ≈ −2.86</div>
+    <div id="adf-verdict"></div>
+  </div>
+  <div class="card">
+    <div class="ct">KPSS test</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-lbl">LM statistic</div><div class="stat-val" id="kpss-lm">—</div></div>
+      <div class="stat"><div class="stat-lbl">5% crit. value</div><div class="stat-val" id="kpss-crit">0.463</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;font-family:var(--font-mono)">H₀: stationary (σᵤ²=0)  |  reject if LM > critical</div>
+    <div id="kpss-verdict"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ct">Joint interpretation</div>
+  <div class="matrix" id="joint-matrix"></div>
+</div>
+
+<div class="card">
+  <div class="ct">Where your t-statistic falls on the Dickey-Fuller distribution</div>
+  <div class="leg">
+    <span class="li"><span class="ls" style="background:#993c1d"></span>Dickey-Fuller distribution</span>
+    <span class="li"><span class="ls" style="background:#888780"></span>N(0,1)</span>
+    <span class="li"><span class="ls" style="background:#185fa5"></span>your t-statistic</span>
+  </div>
+  <div style="position:relative;width:100%;height:160px"><canvas id="c-df" role="img" aria-label="Dickey-Fuller distribution compared to normal, with marker showing the computed t-statistic location"></canvas></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+const C_SER='#185fa5', C_DF='#993c1d', C_N='#888780';
+const GRID=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)';
+const TICK=isDark?'#888780':'#888780';
+let charts={}, currentY=[];
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
+function baseOpts(xl,yl){return{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:GRID},ticks:{font:{size:10},color:TICK,maxTicksLimit:6},title:{display:!!xl,text:xl||'',font:{size:10},color:TICK}},y:{grid:{color:GRID},ticks:{font:{size:10},color:TICK,maxTicksLimit:5},title:{display:!!yl,text:yl||'',font:{size:10},color:TICK}}}};}
+
+function genSeries(T,phi,hasTrend){
+  const y=[0];
+  const beta=hasTrend?0.05:0;
+  for(let t=1;t<T;t++) y.push(phi*y[t-1]+beta*(1-phi)*t/1+randn());
+  if(hasTrend){ return y.map((v,i)=>v+0.08*i); }
+  return y;
+}
+
+function solveLS(X,Y,n,k){
+  const XtX=Array.from({length:k},(_,i)=>Array.from({length:k},(_,j)=>X.reduce((s,r)=>s+r[i]*r[j],0)));
+  const XtY=Array.from({length:k},(_,i)=>X.reduce((s,r,ri)=>s+r[i]*Y[ri],0));
+  const M=XtX.map((r,i)=>[...r,XtY[i]]);
+  for(let i=0;i<k;i++){
+    let maxR=i;
+    for(let r=i+1;r<k;r++) if(Math.abs(M[r][i])>Math.abs(M[maxR][i])) maxR=r;
+    [M[i],M[maxR]]=[M[maxR],M[i]];
+    for(let r=i+1;r<k;r++){const f=M[r][i]/M[i][i];for(let c=i;c<=k;c++) M[r][c]-=f*M[i][c];}
+  }
+  const x=new Array(k).fill(0);
+  for(let i=k-1;i>=0;i--){x[i]=M[i][k];for(let j=i+1;j<k;j++) x[i]-=M[i][j]*x[j];x[i]/=M[i][i];}
+  return x;
+}
+
+function adfTest(y, hasTrend){
+  const T=y.length;
+  const dY=y.slice(1).map((v,i)=>v-y[i]);
+  const n=dY.length-1;
+  const X=[], Y=[];
+  for(let t=1;t<dY.length;t++){
+    const row=[1, y[t]];
+    if(hasTrend) row.push(t);
+    row.push(dY[t-1]);
+    X.push(row);
+    Y.push(dY[t]);
+  }
+  const k=X[0].length;
+  const coefs=solveLS(X,Y,n,k);
+  const resids=Y.map((yy,i)=>yy-X[i].reduce((s,x,j)=>s+x*coefs[j],0));
+  const rss=resids.reduce((s,r)=>s+r*r,0);
+  const sigma2=rss/(n-k);
+  const XtX=Array.from({length:k},(_,i)=>Array.from({length:k},(_,j)=>X.reduce((s,r)=>s+r[i]*r[j],0)));
+  const inv=invertMatrix(XtX,k);
+  const seDelta=Math.sqrt(sigma2*inv[1][1]);
+  const delta=coefs[1];
+  const tstat=delta/seDelta;
+  return {delta, tstat};
+}
+
+function invertMatrix(A,n){
+  const M=A.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let i=0;i<n;i++){
+    let maxR=i;
+    for(let r=i+1;r<n;r++) if(Math.abs(M[r][i])>Math.abs(M[maxR][i])) maxR=r;
+    [M[i],M[maxR]]=[M[maxR],M[i]];
+    const piv=M[i][i];
+    for(let c=0;c<2*n;c++) M[i][c]/=piv;
+    for(let r=0;r<n;r++){
+      if(r!==i){const f=M[r][i];for(let c=0;c<2*n;c++) M[r][c]-=f*M[i][c];}
+    }
+  }
+  return M.map(r=>r.slice(n));
+}
+
+function kpssTest(y, hasTrend){
+  const T=y.length;
+  let resid;
+  if(hasTrend){
+    const tArr=Array.from({length:T},(_,i)=>i);
+    const X=tArr.map(t=>[1,t]);
+    const coefs=solveLS(X,y,T,2);
+    resid=y.map((v,i)=>v-coefs[0]-coefs[1]*i);
+  } else {
+    const mu=y.reduce((a,b)=>a+b,0)/T;
+    resid=y.map(v=>v-mu);
+  }
+  const S=[]; let cum=0;
+  for(let t=0;t<T;t++){cum+=resid[t];S.push(cum);}
+  const l=Math.floor(4*Math.pow(T/100,0.25));
+  const g0=resid.reduce((s,v)=>s+v*v,0)/T;
+  let lrv=g0;
+  for(let j=1;j<=l;j++){
+    let gj=0;
+    for(let t=j;t<T;t++) gj+=resid[t]*resid[t-j];
+    gj/=T;
+    lrv += 2*(1-j/(l+1))*gj;
+  }
+  const sumS2=S.reduce((s,v)=>s+v*v,0);
+  return sumS2/(T*T*lrv);
+}
+
+function dfPDF(x){
+  const mu=-0.5, s=0.55, sk=0.4;
+  const z=(x-mu)/s;
+  return (1/s)*normalPDF(z)*(1+sk*(z**3-3*z)/6);
+}
+function normalPDF(x){return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);}
+
+function drawSeries(y){
+  const L=y.map((_,i)=>i);
+  mk('c-series',{type:'line',data:{labels:L,datasets:[{data:y,borderColor:C_SER,borderWidth:1.3,pointRadius:0,fill:false,tension:0}]},options:baseOpts('t','yₜ')});
+}
+
+function drawDF(tstat){
+  const xs=[],dn=[],nn=[];
+  for(let x=-5;x<=3;x+=0.1){xs.push(x.toFixed(1));dn.push(Math.max(0,dfPDF(x)));nn.push(normalPDF(x));}
+  const cv=-2.86;
+  mk('c-df',{type:'line',data:{labels:xs,datasets:[
+    {data:dn,borderColor:C_DF,borderWidth:2,pointRadius:0,fill:true,backgroundColor:isDark?'rgba(153,60,29,0.1)':'rgba(153,60,29,0.08)',tension:0.3},
+    {data:nn,borderColor:C_N,borderWidth:1.2,pointRadius:0,fill:false,borderDash:[4,3],tension:0.3},
+  ]},options:{...baseOpts('t-statistic','density'),
+    plugins:{legend:{display:false},annotation:{annotations:{
+      cv:{type:'line',xMin:cv,xMax:cv,borderColor:C_DF,borderWidth:1,borderDash:[3,3]},
+      tst:{type:'line',xMin:Math.max(-5,Math.min(3,tstat)),xMax:Math.max(-5,Math.min(3,tstat)),borderColor:C_SER,borderWidth:2}
+    }}}
+  }});
+}
+
+function run(){
+  const T=parseInt(document.getElementById('sel-T').value);
+  const phiSlider=parseInt(document.getElementById('sl-phi').value)/100;
+  const hasTrend=document.getElementById('chk-trend').checked;
+
+  if(currentY.length!==T) resim(); 
+  const y=currentY;
+
+  const adf=adfTest(y,hasTrend);
+  const kpss=kpssTest(y,hasTrend);
+
+  document.getElementById('adf-delta').textContent=adf.delta.toFixed(4);
+  document.getElementById('adf-t').textContent=adf.tstat.toFixed(3);
+  const adfRej=adf.tstat < -2.86;
+  document.getElementById('adf-verdict').innerHTML=adfRej
+    ? `<span class="verdict v-rej">t = ${adf.tstat.toFixed(2)} < −2.86 → reject unit root</span>`
+    : `<span class="verdict v-fail">t = ${adf.tstat.toFixed(2)} > −2.86 → fail to reject unit root</span>`;
+
+  document.getElementById('kpss-lm').textContent=kpss.toFixed(4);
+  const kpssCrit=hasTrend?0.146:0.463;
+  document.getElementById('kpss-crit').textContent=kpssCrit.toFixed(3);
+  const kpssRej=kpss > kpssCrit;
+  document.getElementById('kpss-verdict').innerHTML=kpssRej
+    ? `<span class="verdict v-fail">LM = ${kpss.toFixed(3)} > ${kpssCrit} → reject stationarity</span>`
+    : `<span class="verdict v-rej">LM = ${kpss.toFixed(3)} < ${kpssCrit} → fail to reject stationarity</span>`;
+
+  drawSeries(y);
+  drawDF(adf.tstat);
+  drawJoint(adfRej, kpssRej);
+}
+
+function drawJoint(adfRej, kpssRej){
+  const cells=[
+    {h:'',c1:'ADF: reject UR',c2:'ADF: fail to reject UR'},
+    {h:'KPSS: fail reject stat.',c1:'Stationary — agree',c2:'Inconclusive'},
+    {h:'KPSS: reject stat.',c1:'Inconclusive',c2:'Unit root — agree'},
+  ];
+  let html='<div class="mcell mhead"></div><div class="mcell mhead">ADF rejects UR</div><div class="mcell mhead">ADF fails to reject</div>';
+  html+='<div class="mcell mhead">KPSS fails reject</div>';
+  html+=`<div class="mcell" style="${!adfRej&&!kpssRej?'':'opacity:0.35'};${adfRej&&!kpssRej?'background:var(--color-background-success);color:var(--color-text-success)':''}">Stationary — both agree</div>`;
+  html+=`<div class="mcell" style="${!adfRej&&!kpssRej?'background:var(--color-background-warning);color:var(--color-text-warning)':'opacity:0.35'}">Inconclusive</div>`;
+  html+='<div class="mcell mhead">KPSS rejects stat.</div>';
+  html+=`<div class="mcell" style="${adfRej&&kpssRej?'background:var(--color-background-warning);color:var(--color-text-warning)':'opacity:0.35'}">Inconclusive</div>`;
+  html+=`<div class="mcell" style="${!adfRej&&kpssRej?'background:var(--color-background-danger);color:var(--color-text-danger)':'opacity:0.35'}">Unit root — both agree</div>`;
+  document.getElementById('joint-matrix').innerHTML=html;
+}
+
+function resim(){
+  const T=parseInt(document.getElementById('sel-T').value);
+  const phi=parseInt(document.getElementById('sl-phi').value)/100;
+  const hasTrend=document.getElementById('chk-trend').checked;
+  currentY=genSeries(T,phi,hasTrend);
+  run();
+}
+
+resim();
+</script>
